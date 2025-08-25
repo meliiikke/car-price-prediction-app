@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Araç Fiyat Tahmini - FastAPI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+        .form-control, .form-select {
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .btn-predict {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 40px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-predict:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .result-card {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            margin-top: 2rem;
+            display: none;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 2rem 0;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+        .error-alert {
+            display: none;
+            margin-top: 1rem;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 0.5rem;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+        .api-info {
+            background: linear-gradient(45deg, #17a2b8, #20c997);
+            color: white;
+            border-radius: 15px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-container">
+            <div class="text-center mb-4">
+                <h1 class="display-4 text-primary mb-3">
+                    <i class="fas fa-car"></i> Araç Fiyat Tahmini
+                </h1>
+
+            </div>
+
+            <!-- API Info -->
+            <div class="api-info text-center">
+                <h5><i class="fas fa-info-circle"></i> API Bilgileri</h5>
+                <p class="mb-0">FastAPI ile güçlendirilmiş makine öğrenmesi modeli</p>
+            </div>
+
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="card">
+                        <div class="card-body p-4">
+                            <form id="predictionForm">
+                                <div class="row">
+                                    <!-- Araç Markası ve Modeli -->
+                                    <div class="col-md-6 mb-3">
+                                        <label for="brand" class="form-label">Marka</label>
+                                        <select class="form-select" id="brand" name="Brand" required>
+                                            <option value="">Marka seçin</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="title" class="form-label">Model</label>
+                                        <input type="text" class="form-control" id="title" name="title" 
+                                               placeholder="Örn: Ford Fiesta" required>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <!-- Temel Özellikler -->
+                                    <div class="col-md-4 mb-3">
+                                        <label for="fuelType" class="form-label">Yakıt Tipi</label>
+                                        <select class="form-select" id="fuelType" name="Fuel_type" required>
+                                            <option value="">Yakıt tipi seçin</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="bodyType" class="form-label">Kasa Tipi</label>
+                                        <select class="form-select" id="bodyType" name="Body_type" required>
+                                            <option value="">Kasa tipi seçin</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="gearbox" class="form-label">Vites</label>
+                                        <select class="form-select" id="gearbox" name="Gearbox" required>
+                                            <option value="">Vites tipi seçin</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <!-- Motor ve Performans -->
+                                    <div class="col-md-3 mb-3">
+                                        <label for="engine" class="form-label">Motor (L)</label>
+                                        <input type="number" class="form-control" id="engine" name="Engine" 
+                                               step="0.1" min="0.8" max="6.0" placeholder="1.2" required>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="mileage" class="form-label">Kilometre</label>
+                                        <input type="number" class="form-control" id="mileage" name="Mileage_miles" 
+                                               min="0" max="200000" placeholder="50000" required>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="year" class="form-label">Kayıt Yılı</label>
+                                        <input type="number" class="form-control" id="year" name="Registration_Year" 
+                                               min="1995" max="2024" placeholder="2018" required>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="emission" class="form-label">Emisyon Sınıfı</label>
+                                        <select class="form-select" id="emission" name="Emission_Class" required>
+                                            <option value="">Seçin</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <!-- Diğer Özellikler -->
+                                    <div class="col-md-3 mb-3">
+                                        <label for="doors" class="form-label">Kapı Sayısı</label>
+                                        <input type="number" class="form-control" id="doors" name="Doors" 
+                                               min="2" max="5" placeholder="5" required>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="seats" class="form-label">Koltuk Sayısı</label>
+                                        <input type="number" class="form-control" id="seats" name="Seats" 
+                                               min="2" max="9" placeholder="5" required>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="owners" class="form-label">Önceki Sahip</label>
+                                        <input type="number" class="form-control" id="owners" name="Previous_Owners" 
+                                               min="0" max="10" placeholder="1" value="1" required>
+                                    </div>
+                                </div>
+
+                                <div class="text-center mt-4">
+                                    <button type="submit" class="btn btn-predict btn-lg">
+                                        <i class="fas fa-calculator"></i> Fiyat Tahmini Yap
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Loading -->
+                    <div class="loading" id="loading">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Yükleniyor...</span>
+                        </div>
+                        <p class="mt-3 text-muted">Tahmin yapılıyor...</p>
+                    </div>
+
+                    <!-- Error Alert -->
+                    <div class="alert alert-danger error-alert" id="errorAlert" role="alert">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span id="errorMessage"></span>
+                    </div>
+
+                    <!-- Result Card -->
+                    <div class="result-card" id="resultCard">
+                        <h3 class="mb-3">
+                            <i class="fas fa-chart-line"></i> Tahmin Sonucu
+                        </h3>
+                        <div class="display-4 fw-bold mb-3" id="predictedPrice">£0</div>
+                        <p class="mb-0" id="resultMessage">Tahmin başarılı!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Sayfa yüklendiğinde kategorileri al
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCategories();
+        });
+
+        // Kategorileri yükle
+        async function loadCategories() {
+            try {
+                const response = await fetch('/get_categories');
+                const categories = await response.json();
+                
+                if (response.ok) {
+                    populateSelect('fuelType', categories.fuel_types);
+                    populateSelect('bodyType', categories.body_types);
+                    populateSelect('gearbox', categories.gearbox_types);
+                    populateSelect('emission', categories.emission_classes);
+                    
+                    // Marka seçenekleri (sabit)
+                    const brandOptions = ['Vauxhall', 'Ford', 'BMW', 'Volkswagen', 'Peugeot', 'Mercedes-Benz', 'Nissan', 'Renault', 'Audi', 'Toyota', 'Honda', 'Citroen', 'Fiat', 'MINI', 'Hyundai', 'Other', 'KIA', 'Mazda', 'SKODA', 'SEAT', 'Land', 'Suzuki', 'Volvo', 'Jaguar', 'Mitsubishi', 'Alfa', 'Chevrolet', 'Dacia'];
+                    populateSelect('brand', brandOptions);
+                } else {
+                    console.error('Kategori yükleme hatası:', categories.error);
+                }
+            } catch (error) {
+                console.error('Kategori yükleme hatası:', error);
+            }
+        }
+
+        // Select elementlerini doldur
+        function populateSelect(selectId, options) {
+            const select = document.getElementById(selectId);
+            if (select && options) {
+                options.forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option;
+                    optionElement.textContent = option;
+                    select.appendChild(optionElement);
+                });
+            }
+        }
+
+        // Form submit
+        document.getElementById('predictionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Loading göster
+            showLoading(true);
+            hideError();
+            hideResult();
+
+            try {
+                // Form verilerini topla
+                const formData = new FormData(this);
+                const data = {};
+                formData.forEach((value, key) => {
+                    data[key] = value;
+                });
+
+                // API'ye gönder
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.status === 'success') {
+                    showResult(result.predicted_price_formatted, result.message);
+                } else {
+                    showError(result.error || 'Tahmin hatası oluştu');
+                }
+            } catch (error) {
+                showError('Bağlantı hatası: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        // Loading göster/gizle
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // Hata göster
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorAlert').style.display = 'block';
+        }
+
+        // Hata gizle
+        function hideError() {
+            document.getElementById('errorAlert').style.display = 'none';
+        }
+
+        // Sonuç göster
+        function showResult(price, message) {
+            document.getElementById('predictedPrice').textContent = price;
+            document.getElementById('resultMessage').textContent = message;
+            document.getElementById('resultCard').style.display = 'block';
+            
+            // Smooth scroll to result
+            document.getElementById('resultCard').scrollIntoView({ 
+                behavior: 'smooth' 
+            });
+        }
+
+        // Sonuç gizle
+        function hideResult() {
+            document.getElementById('resultCard').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
