@@ -7,11 +7,12 @@ import pickle
 import pandas as pd
 from pydantic import BaseModel
 import numpy as np
+import os
 
 # FastAPI uygulaması başlatıyoruz
 
 app = FastAPI(title="Car Price Prediction API", version="1.0.0")
-
+model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Model_new.pkl")
 #HTML dosyalarını alma
 
 templates = Jinja2Templates(directory="templates")
@@ -19,7 +20,7 @@ templates = Jinja2Templates(directory="templates")
 # Model yükleme kısmı
 
 try:
-    with open("Model_new.pkl", "rb") as f:
+    with open(model_path, "rb") as f:
         saved_data = joblib.load(f)
         model = saved_data["model"]
         encoder = saved_data["encoders"]
